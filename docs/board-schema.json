@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Board",
+  "description": "A user's Kanban board, stored as JSON in boards.data. Same shape as the frontend BoardData type.",
+  "type": "object",
+  "required": ["columns", "cards"],
+  "additionalProperties": false,
+  "properties": {
+    "columns": {
+      "description": "Columns in display order. The set of column ids is fixed; only titles and cardIds change.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "cardIds"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "cardIds": {
+            "description": "Card ids in display order. Each id must be a key in cards.",
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "cards": {
+      "description": "All cards, keyed by card id. Each card appears in exactly one column's cardIds.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["id", "title", "details"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "details": { "type": "string" }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "columns": [
+        { "id": "col-backlog", "title": "Backlog", "cardIds": ["card-1"] },
+        { "id": "col-discovery", "title": "Discovery", "cardIds": [] },
+        { "id": "col-progress", "title": "In Progress", "cardIds": [] },
+        { "id": "col-review", "title": "Review", "cardIds": [] },
+        { "id": "col-done", "title": "Done", "cardIds": [] }
+      ],
+      "cards": {
+        "card-1": {
+          "id": "card-1",
+          "title": "Align roadmap themes",
+          "details": "Draft quarterly themes with impact statements and metrics."
+        }
+      }
+    }
+  ]
+}

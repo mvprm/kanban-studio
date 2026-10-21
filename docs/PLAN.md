@@ -66,23 +66,25 @@ Success criteria: the board can't be reached without signing in; logging in and 
 
 ## Part 5: Database modeling
 
-- [ ] `docs/board-schema.json`: JSON Schema for the stored board (`BoardData`)
-- [ ] `docs/DATABASE.md`: the tables (`users`: id, username, created_at; `boards`: id, user_id unique, data JSON text, updated_at), creating the database on startup, seeding the `user` account and the default board on first access, and the database file's location (`/app/data/app.db`, mounted from `./data`)
-- [ ] User reviews and approves the database approach
+- [x] `docs/board-schema.json`: JSON Schema for the stored board (`BoardData`)
+- [x] `docs/DATABASE.md`: the tables (`users`: id, username, created_at; `boards`: id, user_id unique, data JSON text, updated_at), creating the database on startup, seeding the `user` account and the default board on first access, and the database file's location (`/app/data/app.db`, mounted from `./data`)
+- [x] User reviews and approves the database approach (JSON blob kept over normalised columns/cards tables)
 
 Success criteria: the user approves the schema and the approach.
 
 ## Part 6: Backend
 
 - [ ] `backend/app/db.py`: connect, create the tables if they're missing, `get_or_create_user`, `get_board(user_id)` (seeds the default board), `save_board(user_id, board)`
-- [ ] Pydantic models for `Board`, `Column`, `Card`, matching the frontend shape; check that every `cardId` refers to a card in `cards`
+- [ ] Pydantic models for `Board`, `Column`, `Card`, matching the frontend shape; check that every `cardId` refers to a card in `cards`, each card's `id` matches its key, and every card is in exactly one column
+- [ ] `PUT` rejects a board whose column ids differ from the stored board's (columns are fixed)
+- [ ] Default board (the demo data) as `backend/app/default_board.json`
 - [ ] `GET /api/board` and `PUT /api/board` for the signed-in user
 - [ ] Database path configurable through an env var so tests can use a temporary file
 
 Tests (pytest, temporary database):
 - the database file and tables are created when missing
 - the first `GET` returns the default board; `PUT` then `GET` returns the saved board
-- `PUT` rejects malformed boards (missing fields, unknown card ids) with 422
+- `PUT` rejects malformed boards (missing fields, unknown card ids, orphaned or duplicated cards, changed column ids) with 422, and nothing is saved
 - both routes return 401 without a session
 - two users' boards are kept separate (tested at the db layer)
 
