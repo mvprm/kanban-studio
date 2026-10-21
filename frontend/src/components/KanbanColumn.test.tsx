@@ -17,6 +17,7 @@ const renderColumn = (column: Column, cards: Card[]) => {
   const handlers = {
     onRename: vi.fn(),
     onAddCard: vi.fn(),
+    onEditCard: vi.fn(),
     onDeleteCard: vi.fn(),
   };
   render(
@@ -57,6 +58,33 @@ describe("KanbanColumn", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /delete first/i }));
     expect(onDeleteCard).toHaveBeenCalledWith("col-a", "card-1");
+  });
+
+  it("calls onEditCard with trimmed values", async () => {
+    const { onEditCard } = renderColumn(
+      { id: "col-a", title: "A", cardIds: ["card-1"] },
+      [card]
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Edit First" }));
+    expect(screen.getByLabelText("Edit title")).toHaveValue("First");
+    expect(screen.getByLabelText("Edit details")).toHaveValue("Some details");
+    await userEvent.type(screen.getByLabelText("Edit title"), " updated ");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onEditCard).toHaveBeenCalledWith("card-1", "First updated", "Some details");
+    expect(screen.queryByLabelText("Edit title")).not.toBeInTheDocument();
+  });
+
+  it("does not save an edit with a blank title", async () => {
+    const { onEditCard } = renderColumn(
+      { id: "col-a", title: "A", cardIds: ["card-1"] },
+      [card]
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Edit First" }));
+    await userEvent.clear(screen.getByLabelText("Edit title"));
+    await userEvent.type(screen.getByLabelText("Edit title"), "   ");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onEditCard).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Edit title")).toBeInTheDocument();
   });
 
   it("calls onAddCard with the column id", async () => {

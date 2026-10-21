@@ -92,10 +92,10 @@ Success criteria: all backend tests pass; the board survives a container restart
 
 ## Part 7: Frontend + Backend
 
-- [ ] `src/lib/api.ts`: `fetchBoard()`, `saveBoard(board)`
-- [ ] `KanbanBoard` loads the board from the API on mount and calls `saveBoard` after each change (move, rename, add, edit, delete)
-- [ ] Card editing: an Edit button on the card switches to an inline form for title and details, with Save and Cancel
-- [ ] Remove `initialData` from the frontend (the backend now seeds the default board)
+- [x] `src/lib/api.ts`: `fetchBoard()`, `saveBoard(board)`
+- [x] `KanbanBoard` loads the board from the API on mount and calls `saveBoard` after each change (move, rename, add, edit, delete)
+- [x] Card editing: an Edit button on the card switches to an inline form for title and details, with Save and Cancel
+- [x] Remove `initialData` from the frontend (the backend now seeds the default board)
 
 Tests:
 - Vitest (`fetch` mocked): the board renders from the API response; each change calls `PUT` with the expected board; editing a card updates its title and details; cancelling an edit keeps the original
