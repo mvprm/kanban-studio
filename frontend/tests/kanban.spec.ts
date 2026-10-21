@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.request.post("/api/login", {
+    data: { username: "user", password: "password" },
+  });
+});
+
 test("loads the kanban board", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Kanban Studio" })).toBeVisible();
@@ -14,6 +20,22 @@ test("adds a card to a column", async ({ page }) => {
   await firstColumn.getByPlaceholder("Details").fill("Added via e2e.");
   await firstColumn.getByRole("button", { name: /add card/i }).click();
   await expect(firstColumn.getByText("Playwright card")).toBeVisible();
+});
+
+test("renames a column", async ({ page }) => {
+  await page.goto("/");
+  const title = page.getByTestId("column-col-backlog").getByLabel("Column title");
+  await title.fill("Ideas");
+  await expect(title).toHaveValue("Ideas");
+});
+
+test("deletes a card", async ({ page }) => {
+  await page.goto("/");
+  const column = page.getByTestId("column-col-backlog");
+  await column
+    .getByRole("button", { name: "Delete Align roadmap themes", exact: true })
+    .click();
+  await expect(page.getByTestId("card-card-1")).toHaveCount(0);
 });
 
 test("moves a card between columns", async ({ page }) => {
