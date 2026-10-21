@@ -74,12 +74,12 @@ Success criteria: the user approves the schema and the approach.
 
 ## Part 6: Backend
 
-- [ ] `backend/app/db.py`: connect, create the tables if they're missing, `get_or_create_user`, `get_board(user_id)` (seeds the default board), `save_board(user_id, board)`
-- [ ] Pydantic models for `Board`, `Column`, `Card`, matching the frontend shape; check that every `cardId` refers to a card in `cards`, each card's `id` matches its key, and every card is in exactly one column
-- [ ] `PUT` rejects a board whose column ids differ from the stored board's (columns are fixed)
-- [ ] Default board (the demo data) as `backend/app/default_board.json`
-- [ ] `GET /api/board` and `PUT /api/board` for the signed-in user
-- [ ] Database path configurable through an env var so tests can use a temporary file
+- [x] `backend/app/db.py`: connect, create the tables if they're missing, `get_or_create_user`, `get_board(user_id)` (seeds the default board), `save_board(user_id, board)`
+- [x] Pydantic models for `Board`, `Column`, `Card`, matching the frontend shape; check that every `cardId` refers to a card in `cards`, each card's `id` matches its key, and every card is in exactly one column
+- [x] `PUT` rejects a board whose column ids differ from the stored board's (columns are fixed)
+- [x] Default board (the demo data) as `backend/app/default_board.json`
+- [x] `GET /api/board` and `PUT /api/board` for the signed-in user
+- [x] Database path configurable through an env var so tests can use a temporary file
 
 Tests (pytest, temporary database):
 - the database file and tables are created when missing

@@ -177,6 +177,7 @@ cython_debug/
 
 # SQLite data
 /data/
+/backend/data/
 
 # Frontend export copied in by Docker
 /backend/app/static/

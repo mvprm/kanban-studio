@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS boards (
 ## Lifecycle
 
 - The database file and tables are created on app startup if they don't exist (`CREATE TABLE IF NOT EXISTS`).
-- A `users` row is created on first successful login.
-- On a user's first `GET /api/board`, a `boards` row is created holding the default board (the current demo data: 5 columns, 8 cards), which moves from the frontend to the backend.
+- A `users` row is created the first time a signed-in user calls a board route (`current_user_id` dependency).
+- On a user's first board access, a `boards` row is created holding the default board (`backend/app/default_board.json`: 5 columns, 8 cards).
 - Every `PUT /api/board`, and every AI update, replaces `data` and `updated_at` for that user's row.
 
 ## Validation
