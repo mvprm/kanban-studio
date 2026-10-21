@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import ai, db
@@ -30,6 +30,11 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 class Credentials(BaseModel):
     username: str
     password: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[ai.Message] = []
 
 
 def current_user(request: Request) -> str:
@@ -72,19 +77,39 @@ def read_board(user_id: int = Depends(current_user_id)):
     return db.get_board(user_id)
 
 
-@app.put("/api/board", response_model=Board)
-def update_board(board: Board, user_id: int = Depends(current_user_id)):
-    stored_ids = [column["id"] for column in db.get_board(user_id)["columns"]]
-    if [column.id for column in board.columns] != stored_ids:
+def save_board(user_id: int, board: Board, stored: dict) -> dict:
+    """Save the board unless its column ids differ from the stored board's."""
+    if [column.id for column in board.columns] != [column["id"] for column in stored["columns"]]:
         raise HTTPException(status_code=422, detail="Column ids cannot change")
     data = board.model_dump(by_alias=True)
     db.save_board(user_id, data)
     return data
 
 
+@app.put("/api/board", response_model=Board)
+def update_board(board: Board, user_id: int = Depends(current_user_id)):
+    return save_board(user_id, board, db.get_board(user_id))
+
+
 @app.post("/api/ai/test")
 def ai_test(username: str = Depends(current_user)):
     return {"reply": ai.complete("What is 2+2?")}
+
+
+@app.post("/api/chat")
+def chat(request: ChatRequest, user_id: int = Depends(current_user_id)):
+    stored = db.get_board(user_id)
+    result = ai.chat(stored, request.history, request.message)
+    if result.board is None:
+        return {"reply": result.reply, "board": None}
+    try:
+        board = Board(
+            columns=result.board.columns,
+            cards={card.id: card for card in result.board.cards},
+        )
+    except ValidationError as error:
+        raise HTTPException(status_code=502, detail=f"AI returned an invalid board: {error}")
+    return {"reply": result.reply, "board": save_board(user_id, board, stored)}
 
 
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

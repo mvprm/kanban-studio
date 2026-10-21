@@ -116,14 +116,14 @@ Success criteria: the real OpenRouter call succeeds from inside the container.
 
 ## Part 9: AI with board context and structured outputs
 
-- [ ] `POST /api/chat` with body `{ message, history: [{role, content}] }`
-- [ ] Send a system prompt describing the board format and the rules (keep column ids, return the whole board when changing it, otherwise `null`), the current board JSON, the history, and the user's message
-- [ ] Structured output with `response_format` set to a JSON schema for `{ reply: string, board: Board | null }`; parse it with Pydantic
-- [ ] If a board is returned, validate it and save it; respond `{ reply, board }`
+- [x] `POST /api/chat` with body `{ message, history: [{role, content}] }`
+- [x] Send a system prompt describing the board format and the rules (keep column ids, return the whole board when changing it, otherwise `null`), the current board JSON, the history, and the user's message
+- [x] Structured output with `response_format` set to a JSON schema for `{ reply: string, board: Board | null }`; parse it with Pydantic (the AI sees and returns `cards` as a list, since strict JSON schemas can't describe a dict keyed by id; the route converts it back)
+- [x] If a board is returned, validate it and save it; respond `{ reply, board }`
 
 Tests:
 - default (OpenRouter client mocked): the reply is passed through; a returned board is saved; a `null` board leaves the stored board unchanged; an invalid board is rejected and nothing is saved; the prompt includes the board and the history
-- `ai` (real API): "add a card titled X to Backlog" saves a board with that card; a question with no change ("how many cards are in Done?") returns `board: null`; "move card-1 to Done" moves it
+- `ai` (real API): "add a card titled X to Backlog" saves a board with that card; a question with no change ("how many cards are in Done?") returns `board: null`; "move card-1 to Done" moves it; "change the title of card-2" edits it
 
 Success criteria: the real model reliably creates, edits and moves cards through `/api/chat`.
 
