@@ -7,7 +7,7 @@
 - Sign in: `POST /api/login` checks the hardcoded `user` / `password` and sets a signed session cookie (Starlette `SessionMiddleware`). All board and chat routes need a session.
 - Database: SQLite through Python's built-in `sqlite3`. A `users` table and a `boards` table; each board is stored as one JSON blob in the frontend's `BoardData` shape. The database is created on startup if it doesn't exist.
 - API: `GET /api/board` and `PUT /api/board`, which replaces the whole board. The frontend saves the full board after each change.
-- AI: OpenRouter through the `openai` Python SDK (with `base_url` set to OpenRouter), model `inception/mercury-decide:free`. Chat returns structured output `{ reply, board | null }`, where `board` is the whole updated board.
+- AI: OpenRouter through the `openai` Python SDK (with `base_url` set to OpenRouter), model `openai/gpt-oss-120b` (`inception/mercury-decide:free` is a decisions-only model that the chat endpoint rejects). Chat returns structured output `{ reply, board | null }`, where `board` is the whole updated board.
 - Chat history is kept in the browser for the session only and is not saved to the database.
 - Card editing (title and details) is added in Part 7.
 - Tests: backend pytest; frontend Vitest + Playwright. Playwright runs against the running container. Tests that call the real OpenRouter API are marked `ai` and are left out of the default test run.
@@ -105,9 +105,9 @@ Success criteria: every board change survives a page reload and a container rest
 
 ## Part 8: AI connectivity
 
-- [ ] Add the `openai` dependency; `backend/app/ai.py` creates a client with `base_url="https://openrouter.ai/api/v1"` and `OPENROUTER_API_KEY`
-- [ ] A simple completion function, and a signed-in `POST /api/ai/test` route that asks "What is 2+2?"
-- [ ] pytest `ai` marker, left out of the default run (`addopts = -m "not ai"`); run with `uv run pytest -m ai`
+- [x] Add the `openai` dependency; `backend/app/ai.py` creates a client with `base_url="https://openrouter.ai/api/v1"` and `OPENROUTER_API_KEY`
+- [x] A simple completion function, and a signed-in `POST /api/ai/test` route that asks "What is 2+2?"
+- [x] pytest `ai` marker, left out of the default run (`addopts = -m "not ai"`); run with `uv run pytest -m ai`
 
 Tests:
 - `ai`: a real call to "What is 2+2?" returns text that contains "4"
