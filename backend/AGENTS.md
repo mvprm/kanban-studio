@@ -6,6 +6,7 @@ Python FastAPI app managed with uv (Python 3.14).
 
 - `app/main.py` - FastAPI app; creates the database on startup (lifespan); API routes live under `/api`; the static frontend is mounted at `/` last so API routes take precedence
 - `app/db.py` - SQLite via `sqlite3`: `init_db`, `get_or_create_user`, `get_board` (seeds the default board), `save_board`. See `docs/DATABASE.md`
+- `app/ai.py` - OpenRouter client and `complete(prompt)`
 - `app/models.py` - Pydantic `Board`/`Column`/`Card` matching `docs/board-schema.json`; validates card ids, orphans and duplicates
 - `app/default_board.json` - board given to a user on first access
 - `app/static/` - the Next.js static export, copied in by the Docker build (gitignored; `STATIC_DIR` env var overrides the path)
@@ -27,6 +28,11 @@ Starlette `SessionMiddleware` stores the username in a signed, httponly cookie (
 - `GET /api/me` - `{username}`, or 401 if not signed in
 - `GET /api/board` - the signed-in user's board
 - `PUT /api/board` - replace the whole board; 422 if invalid or the column ids change, and nothing is saved
+- `POST /api/ai/test` - signed in; asks the AI "What is 2+2?" and returns `{reply}`
+
+## AI
+
+`app/ai.py` calls OpenRouter through the `openai` SDK (`base_url` set to OpenRouter, `OPENROUTER_API_KEY` from the environment), model `openai/gpt-oss-120b`. Tests that call the real API are marked `ai` and excluded by default; run them with `uv run --env-file ../.env pytest -m ai`.
 
 ## Commands
 

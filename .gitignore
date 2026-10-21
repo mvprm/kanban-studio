@@ -178,6 +178,7 @@ cython_debug/
 # SQLite data
 /data/
 /backend/data/
+/backend/.pytest_tmp/
 
 # Frontend export copied in by Docker
 /backend/app/static/
