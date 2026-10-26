@@ -38,3 +38,18 @@ export const saveBoard = (board: BoardData) => {
   pendingSave = pendingSave.then(put, put);
   return pendingSave;
 };
+
+export type ChatMessage = { role: "user" | "assistant"; content: string };
+
+export const sendChat = async (
+  message: string,
+  history: ChatMessage[]
+): Promise<{ reply: string; board: BoardData | null }> => {
+  // The AI works from the stored board, so let pending saves land first
+  await pendingSave;
+  const response = await send("POST", "/api/chat", { message, history });
+  if (!response.ok) {
+    throw new Error(`Chat failed with status ${response.status}`);
+  }
+  return response.json();
+};

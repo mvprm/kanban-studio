@@ -78,10 +78,13 @@ def test_prompt_includes_board_history_and_message(signed_in, fake_ai):
     [call] = fake_ai.calls
     assert call["model"] == ai.MODEL
     assert call["response_format"] is ai.ChatResult
-    system, *rest = call["messages"]
-    assert system["role"] == "system"
-    assert json.dumps(ai_board(DEFAULT)) in system["content"]
-    assert rest == [*history, {"role": "user", "content": "What is in Review?"}]
+    assert call["extra_body"] == {"provider": ai.PROVIDER}
+    system, *past, latest = call["messages"]
+    assert system == {"role": "system", "content": ai.SYSTEM_PROMPT}
+    assert past == history
+    assert latest["role"] == "user"
+    assert json.dumps(ai_board(DEFAULT)) in latest["content"]
+    assert latest["content"].endswith("What is in Review?")
 
 
 def chat(client, message):
@@ -123,3 +126,20 @@ def test_real_chat_edits_card(signed_in):
     assert result["board"] is not None
     assert cards["card-2"]["title"] == "Interview five customers"
     assert len(cards) == len(DEFAULT["cards"])
+
+
+@pytest.mark.ai
+def test_real_chat_does_not_repeat_earlier_requests(signed_in):
+    first = 'Add a card titled "Write release notes" to Backlog.'
+    reply = chat(signed_in, first)["reply"]
+    count = len(signed_in.get("/api/board").json()["cards"])
+    history = [{"role": "user", "content": first}, {"role": "assistant", "content": reply}]
+    response = signed_in.post(
+        "/api/chat",
+        json={"message": 'Rename "Write release notes" to "Publish release notes".', "history": history},
+    )
+    assert response.status_code == 200, response.text
+    titles = [c["title"] for c in signed_in.get("/api/board").json()["cards"].values()]
+    assert len(titles) == count
+    assert "Publish release notes" in titles
+    assert "Write release notes" not in titles

@@ -1,3 +1,4 @@
+import type { ChatMessage } from "@/lib/api";
 import type { BoardData } from "@/lib/kanban";
 
 export const testBoard: BoardData = {
@@ -18,8 +19,17 @@ export const testBoard: BoardData = {
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
+export type ChatHandler = (body: {
+  message: string;
+  history: ChatMessage[];
+}) => Promise<{ reply: string; board: BoardData | null }>;
+
 // Stubs fetch with an in-memory version of the backend API
-export const mockApi = ({ signedIn = true, board = testBoard } = {}) => {
+export const mockApi = ({
+  signedIn = true,
+  board = testBoard,
+  chat = (async () => ({ reply: "OK", board: null })) as ChatHandler,
+} = {}) => {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     if (url === "/api/me") {
@@ -39,6 +49,13 @@ export const mockApi = ({ signedIn = true, board = testBoard } = {}) => {
     if (url === "/api/board" && method === "PUT") {
       board = JSON.parse(init?.body as string);
       return json(board);
+    }
+    if (url === "/api/chat") {
+      const result = await chat(JSON.parse(init?.body as string));
+      if (result.board) {
+        board = result.board;
+      }
+      return json(result);
     }
     throw new Error(`Unexpected request: ${method} ${url}`);
   });
