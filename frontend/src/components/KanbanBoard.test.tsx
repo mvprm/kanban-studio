@@ -1,11 +1,11 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KanbanBoard } from "@/components/KanbanBoard";
-import { json, mockApi, savedBoards } from "@/test/api";
+import { boardRecord, json, mockApi, requests, savedBoards } from "@/test/api";
 
-const renderBoard = async (onLogout = vi.fn()) => {
+const renderBoard = async () => {
   const fetchMock = mockApi();
-  render(<KanbanBoard onLogout={onLogout} />);
+  render(<KanbanBoard boardId={1} />);
   await screen.findAllByTestId(/^column-/);
   return fetchMock;
 };
@@ -24,18 +24,48 @@ describe("KanbanBoard", () => {
 
   it("renders the board from the API", async () => {
     const fetchMock = await renderBoard();
-    expect(fetchMock).toHaveBeenCalledWith("/api/board");
+    expect(requests(fetchMock, "GET", "/api/boards/1")).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "My first board" })).toBeInTheDocument();
+    expect(screen.getByText(/^3 cards\./)).toBeInTheDocument();
     expect(screen.getAllByTestId(/^column-/)).toHaveLength(5);
     expect(within(column("col-backlog")).getByText("First card")).toBeInTheDocument();
     expect(within(column("col-progress")).getByText("Third card")).toBeInTheDocument();
     expect(savedBoards(fetchMock)).toHaveLength(0);
   });
 
-  it("calls onLogout when log out is clicked", async () => {
-    const onLogout = vi.fn();
-    await renderBoard(onLogout);
-    await userEvent.click(screen.getByRole("button", { name: /log out/i }));
-    expect(onLogout).toHaveBeenCalledOnce();
+  it("loads the board it is given", async () => {
+    mockApi({ boards: [boardRecord(1, "One"), boardRecord(7, "Seven")] });
+    render(<KanbanBoard boardId={7} />);
+    expect(await screen.findByRole("heading", { name: "Seven" })).toBeInTheDocument();
+  });
+
+  it("shows an error when the board cannot be loaded", async () => {
+    const fetchMock = mockApi();
+    fetchMock.mockImplementationOnce(async () => json({ detail: "Board not found" }, 404));
+    render(<KanbanBoard boardId={1} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Board not found");
+    expect(screen.queryAllByTestId(/^column-/)).toHaveLength(0);
+  });
+
+  it("saves to the open board", async () => {
+    const fetchMock = mockApi({ boards: [boardRecord(1, "One"), boardRecord(7, "Seven")] });
+    render(<KanbanBoard boardId={7} />);
+    await screen.findByRole("heading", { name: "Seven" });
+    await userEvent.click(screen.getByRole("button", { name: "Delete First card" }));
+    await waitFor(() =>
+      expect(requests(fetchMock, "PUT", "/api/boards/7/data")).toHaveLength(1)
+    );
+    expect(requests(fetchMock, "PUT", "/api/boards/1/data")).toHaveLength(0);
+  });
+
+  it("saves an added card with empty details when none are given", async () => {
+    const fetchMock = await renderBoard();
+    const backlog = column("col-backlog");
+    await userEvent.click(within(backlog).getByRole("button", { name: /add a card/i }));
+    await userEvent.type(within(backlog).getByPlaceholderText(/card title/i), "Bare card");
+    await userEvent.click(within(backlog).getByRole("button", { name: /add card/i }));
+    const saved = await lastSaved(fetchMock);
+    expect(saved.cards[saved.columns[0].cardIds[2]].details).toBe("");
   });
 
   it("saves a renamed column", async () => {

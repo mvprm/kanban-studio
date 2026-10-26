@@ -1,11 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KanbanBoard } from "@/components/KanbanBoard";
-import { mockApi, savedBoards, testBoard, type ChatHandler } from "@/test/api";
+import { json, mockApi, requests, savedBoards, testBoard, type ChatHandler } from "@/test/api";
 
 const renderWithChat = async (chat?: ChatHandler) => {
   const fetchMock = mockApi({ chat });
-  render(<KanbanBoard onLogout={vi.fn()} />);
+  render(<KanbanBoard boardId={1} />);
   await screen.findAllByTestId(/^column-/);
   await userEvent.click(screen.getByRole("button", { name: "AI chat" }));
   return fetchMock;
@@ -17,9 +17,7 @@ const sendMessage = async (text: string) => {
 };
 
 const chatBodies = (fetchMock: ReturnType<typeof mockApi>) =>
-  fetchMock.mock.calls
-    .filter(([url]) => url === "/api/chat")
-    .map(([, init]) => JSON.parse(init?.body as string));
+  requests(fetchMock, "POST", "/api/boards/1/chat");
 
 describe("ChatSidebar", () => {
   afterEach(() => {
@@ -102,5 +100,36 @@ describe("ChatSidebar", () => {
     });
     await sendMessage("Hello");
     expect(await screen.findByRole("alert")).toHaveTextContent(/something went wrong/i);
+  });
+
+  it("explains a conflict when the board changed during the AI call", async () => {
+    await renderWithChat(async () =>
+      json({ detail: "The board changed while the AI was working" }, 409)
+    );
+    await sendMessage("Move a card");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The board changed while the AI was working. Please send your request again."
+    );
+  });
+
+  it("restores a failed message and leaves it out of the history", async () => {
+    let fail = true;
+    const fetchMock = await renderWithChat(async () => {
+      if (fail) {
+        fail = false;
+        throw new Error("AI down");
+      }
+      return { reply: "Done.", board: null };
+    });
+    await sendMessage("First try");
+    await screen.findByRole("alert");
+    const sidebar = screen.getByRole("complementary", { name: "AI chat" });
+    expect(within(sidebar).queryByText("First try")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Chat message")).toHaveValue("First try");
+
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await within(sidebar).findByText("Done.")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(chatBodies(fetchMock).at(-1)).toEqual({ message: "First try", history: [] });
   });
 });

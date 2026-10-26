@@ -52,14 +52,6 @@ def client() -> OpenAI:
     )
 
 
-def complete(prompt: str) -> str:
-    response = client().chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.choices[0].message.content
-
-
 def chat(board: dict, history: list[Message], message: str) -> ChatResult:
     ai_board = {"columns": board["columns"], "cards": list(board["cards"].values())}
     response = client().chat.completions.parse(

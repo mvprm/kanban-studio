@@ -141,3 +141,54 @@ Tests:
 - Manual check with the real model: ask it to add and move cards and watch the board update
 
 Success criteria: chatting with the AI in the sidebar can create, edit and move cards, and the board updates without a reload.
+
+# Phase 2: Full project management app
+
+Goal: grow the MVP into a multi-user project management app: real accounts, several boards per user, richer cards and columns, search, and strong unit, API and end-to-end test coverage. Decisions were made autonomously during an iterative build loop; each part lists them so they can be reviewed.
+
+## Key decisions (Phase 2)
+
+- Accounts live in the database: `users.password_hash` holds a salted `hashlib.scrypt` hash (standard library, no new dependency). Anyone can register; the `user` / `password` demo account is seeded on startup so the original sign in keeps working.
+- The session stores `user_id`. Each request loads the user, so a deleted account is signed out at once.
+- A user has many boards (`boards.user_id` is no longer unique; boards gain `name` and `created_at`). The board content stays one JSON document per board, so the frontend, API and AI keep sharing one shape.
+- Schema changes are versioned with `PRAGMA user_version`; `init_db` migrates an MVP database in place, so existing boards are kept.
+- Every board route checks ownership and returns 404 for a board the user does not own (no existence leak).
+- New users get the demo board ("My first board"); boards created later start with the five default columns and no cards.
+- The frontend keeps the open board id in the URL hash (`#board=<id>`), so reload and the browser back button work with the static export.
+- E2E tests register a fresh user per test, so they are isolated from each other and from manual use.
+- Coverage: `pytest-cov` for the backend and `@vitest/coverage-v8` for the frontend, both with enforced thresholds.
+
+## Part 11: User accounts
+
+- [x] Schema v1: `users (id, username unique, password_hash, created_at)`; migration from the MVP schema
+- [x] `app/auth.py`: `hash_password`, `verify_password` (scrypt, constant-time compare)
+- [x] `POST /api/register` (username 3-32 chars of letters, digits, `._-`; password 8+ chars; 409 if taken; signs in and seeds the demo board)
+- [x] `POST /api/login` checks the database; `GET /api/me`; `POST /api/logout`
+- [x] `PUT /api/me/password` (current password required); `DELETE /api/me` (password required; deletes the user's boards)
+- [x] Frontend: sign in / create account toggle on the auth form; account dialog with change password and delete account
+
+Tests: pytest for hashing, registration rules, login, password change, account deletion, migration of an MVP database; Vitest for the auth form and account dialog; Playwright for register, sign in, change password, delete account.
+
+## Part 12: Multiple boards
+
+- [x] Schema v1: `boards (id, user_id, name, data, created_at, updated_at)`
+- [x] `GET /api/boards`, `POST /api/boards`, `GET /api/boards/{id}`, `PATCH /api/boards/{id}` (rename), `DELETE /api/boards/{id}`, `PUT /api/boards/{id}/data`, `POST /api/boards/{id}/chat`; remove `/api/board` and the Part 8 `/api/ai/test` route
+- [x] Frontend: board list (create, rename, delete, open), board view with a back link, board id in the URL hash
+
+Tests: pytest for each route, ownership (404 on another user's board), validation; Vitest for the board list and navigation; Playwright for creating, renaming, opening and deleting boards, and that boards are kept separate.
+
+## Part 13: Editable columns and richer cards
+
+- [ ] Columns can be added, deleted (with their cards, after confirmation) and reordered; the fixed-column-id rule is dropped
+- [ ] Cards gain optional `priority` (low, medium, high), `dueDate` (ISO date) and `labels` (list of short strings); shown on the card and editable in the card form; overdue cards are highlighted
+- [ ] The AI prompt and schema cover the new fields and column changes
+
+## Part 14: Search, filters and board overview
+
+- [ ] Search box and priority / label filters on the board (client side)
+- [ ] Board list shows per-board stats (cards, done, overdue)
+
+## Part 15: Hardening and coverage
+
+- [ ] Coverage thresholds enforced; fill gaps found by the reports
+- [ ] Code review pass over Phase 2; fix findings

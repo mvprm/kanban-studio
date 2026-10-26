@@ -1,26 +1,16 @@
-import { expect, test, type Page } from "@playwright/test";
-import defaultBoard from "../../backend/app/default_board.json";
+import { expect, test } from "@playwright/test";
+import { columns, openBoard, registerUser, saved } from "./helpers";
 
+// Each test gets a new user, whose first board is the demo board
 test.beforeEach(async ({ page }) => {
-  await page.request.post("/api/login", {
-    data: { username: "user", password: "password" },
-  });
-  await page.request.put("/api/board", { data: defaultBoard });
+  await registerUser(page);
   await page.goto("/");
-  await expect(page.locator('[data-testid^="column-"]')).toHaveCount(5);
+  await openBoard(page, "My first board");
 });
-
-// Runs an action and waits for the board save it triggers
-const saved = async (page: Page, action: () => Promise<void>) => {
-  const response = page.waitForResponse(
-    (r) => r.url().endsWith("/api/board") && r.request().method() === "PUT"
-  );
-  await action();
-  expect((await response).ok()).toBe(true);
-};
 
 test("loads the board from the backend", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Kanban Studio" })).toBeVisible();
+  await expect(page.getByText(/^8 cards\./)).toBeVisible();
   await expect(page.getByTestId("column-col-backlog").getByText("Align roadmap themes")).toBeVisible();
 });
 
@@ -75,7 +65,7 @@ test("deletes a card and it persists", async ({ page }) => {
   await expect(page.getByTestId("card-card-1")).toHaveCount(0);
 
   await page.reload();
-  await expect(page.locator('[data-testid^="column-"]')).toHaveCount(5);
+  await expect(columns(page)).toHaveCount(5);
   await expect(page.getByTestId("card-card-1")).toHaveCount(0);
 });
 

@@ -4,17 +4,18 @@ Python FastAPI app managed with uv (Python 3.14).
 
 ## Structure
 
-- `app/main.py` - FastAPI app; creates the database on startup (lifespan); API routes live under `/api`; the static frontend is mounted at `/` last so API routes take precedence
-- `app/db.py` - SQLite via `sqlite3`: `init_db`, `get_or_create_user`, `get_board` (seeds the default board), `save_board`. See `docs/DATABASE.md`
-- `app/ai.py` - OpenRouter client, `complete(prompt)`, and `chat(board, history, message)` with structured output
+- `app/main.py` - FastAPI app; creates or migrates the database and seeds the demo account on startup (lifespan); API routes live under `/api`; the static frontend is mounted at `/` last so API routes take precedence
+- `app/db.py` - SQLite via `sqlite3`: `init_db` (creates or migrates; see `docs/DATABASE.md`), user functions (`create_user`, `get_user`, `get_user_by_username`, `get_password_hash`, `set_password_hash`, `delete_user`) and board functions (`list_boards`, `create_board`, `get_board`, `rename_board`, `save_board_data`, `delete_board`); `default_board()` and `empty_board()` templates
+- `app/auth.py` - `hash_password` / `verify_password` (salted `hashlib.scrypt`, constant-time compare)
+- `app/ai.py` - OpenRouter client and `chat(board, history, message)` with structured output
 - `app/models.py` - Pydantic `Board`/`Column`/`Card` matching `docs/board-schema.json`; validates card ids, orphans and duplicates
-- `app/default_board.json` - board given to a user on first access
+- `app/default_board.json` - the demo board every new user gets as "My first board"
 - `app/static/` - the Next.js static export, copied in by the Docker build (gitignored; `STATIC_DIR` env var overrides the path)
-- `tests/` - pytest tests using FastAPI's `TestClient`; `conftest.py` points `STATIC_DIR` at a stub `index.html` and provides `db_path` (temp database), `client` (runs startup) and `signed_in` fixtures
+- `tests/` - pytest tests using FastAPI's `TestClient`; `conftest.py` points `STATIC_DIR` at a stub `index.html` and provides `db_path` (temp database), `client` (runs startup), `signed_in` (the demo user) and `new_client` (more clients, optionally registered as another user) fixtures, plus `DEFAULT` and `first_board_id`. Coverage is measured on every run (`pytest-cov`) and must stay at 95% or more
 
 ## Auth
 
-Starlette `SessionMiddleware` stores the username in a signed, httponly cookie (`SESSION_SECRET` env var, dev default). The MVP account is hardcoded (`user` / `password`). Use the `current_user` dependency to require a signed-in user (401 otherwise), or `current_user_id` to also get their database id.
+Accounts are stored in the database with scrypt password hashes. Anyone can register; the `user` / `password` demo account is created on startup. Starlette `SessionMiddleware` stores the user id in a signed, httponly cookie (`SESSION_SECRET` env var, dev default). The `current_user` dependency loads the user (401 if not signed in or the account was deleted); `owned_board` loads a board the user owns (404 otherwise, including other users' boards).
 
 ## Database
 
@@ -23,13 +24,23 @@ Starlette `SessionMiddleware` stores the username in a signed, httponly cookie (
 ## Routes
 
 - `GET /api/health` - `{"status": "ok"}`
-- `POST /api/login` - body `{username, password}`; sets the session; 401 on wrong credentials
+Users are `{id, username, createdAt}`; board summaries are `{id, name, createdAt, updatedAt}`; a full board adds `data` (the board JSON).
+
+- `POST /api/register` - body `{username, password}` (username 3-32 of letters, digits, `._-`; password 8+ characters, else 422); 409 if the username is taken (ignoring case); creates the user with the demo board, signs in, returns the user (201)
+- `POST /api/login` - body `{username, password}`; sets the session and returns the user; 401 on wrong credentials
 - `POST /api/logout` - clears the session
-- `GET /api/me` - `{username}`, or 401 if not signed in
-- `GET /api/board` - the signed-in user's board
-- `PUT /api/board` - replace the whole board; 422 if invalid or the column ids change, and nothing is saved
-- `POST /api/ai/test` - signed in; asks the AI "What is 2+2?" and returns `{reply}`
-- `POST /api/chat` - body `{message, history: [{role, content}]}`; returns `{reply, board}`, where `board` is the saved updated board or `null` if the AI made no change; 502 (or 422 for changed column ids) if the AI returns an invalid board, and nothing is saved
+- `GET /api/me` - the user, or 401 if not signed in
+- `PUT /api/me/password` - body `{currentPassword, newPassword}`; 403 if the current password is wrong
+- `DELETE /api/me` - body `{password}`; deletes the user and their boards and signs out (204); 403 on a wrong password
+- `GET /api/boards` - the user's board summaries, oldest first
+- `POST /api/boards` - body `{name}` (1-80 characters after trimming); creates a board with the default columns and no cards; returns the full board (201)
+- `GET /api/boards/{id}` - the full board
+- `PATCH /api/boards/{id}` - body `{name}`; returns the summary
+- `DELETE /api/boards/{id}` - 204
+- `PUT /api/boards/{id}/data` - replace the board's data; 422 if invalid or the column ids change, and nothing is saved
+- `POST /api/boards/{id}/chat` - body `{message, history: [{role, content}]}`; returns `{reply, board}`, where `board` is the saved updated data or `null` if the AI made no change; 502 (or 422 for changed column ids) if the AI returns an invalid board, 409 if the board was saved while the AI was working; nothing is saved in those cases
+
+Every `/api/boards/{id}` route returns 404 for a board the user does not own.
 
 ## AI
 

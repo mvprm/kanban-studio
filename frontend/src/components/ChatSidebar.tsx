@@ -3,14 +3,15 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import clsx from "clsx";
 import { SendHorizontal, Sparkles, X } from "lucide-react";
-import { sendChat, type ChatMessage } from "@/lib/api";
+import { ApiError, sendChat, type ChatMessage } from "@/lib/api";
 import type { BoardData } from "@/lib/kanban";
 
 type ChatSidebarProps = {
+  boardId: number;
   onBoardChange: (board: BoardData) => void;
 };
 
-export const ChatSidebar = ({ onBoardChange }: ChatSidebarProps) => {
+export const ChatSidebar = ({ boardId, onBoardChange }: ChatSidebarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -35,13 +36,20 @@ export const ChatSidebar = ({ onBoardChange }: ChatSidebarProps) => {
     setError("");
     setIsLoading(true);
     try {
-      const { reply, board } = await sendChat(message, messages);
+      const { reply, board } = await sendChat(boardId, message, messages);
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       if (board) {
         onBoardChange(board);
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (caught) {
+      // Drop the unanswered message so it isn't sent as history, and offer it again
+      setMessages((prev) => prev.slice(0, -1));
+      setInput(message);
+      setError(
+        caught instanceof ApiError && caught.status === 409
+          ? "The board changed while the AI was working. Please send your request again."
+          : "Something went wrong. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
