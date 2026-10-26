@@ -41,7 +41,7 @@ describe("KanbanColumn", () => {
     renderColumn({ id: "col-a", title: "A", cardIds: ["card-1"] }, [card]);
     expect(screen.getByText("First")).toBeInTheDocument();
     expect(screen.getByText("Some details")).toBeInTheDocument();
-    expect(screen.getByText("1 cards")).toBeInTheDocument();
+    expect(screen.getByText("1 card")).toBeInTheDocument();
     expect(screen.queryByText(/drop a card here/i)).not.toBeInTheDocument();
   });
 

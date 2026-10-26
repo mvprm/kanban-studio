@@ -34,7 +34,12 @@ let pendingSave: Promise<unknown> = Promise.resolve();
 
 // Saves run one at a time, so the server always ends up with the latest board
 export const saveBoard = (board: BoardData) => {
-  const put = () => send("PUT", "/api/board", board);
+  const put = async () => {
+    const response = await send("PUT", "/api/board", board);
+    if (!response.ok) {
+      throw new Error(`Save failed with status ${response.status}`);
+    }
+  };
   pendingSave = pendingSave.then(put, put);
   return pendingSave;
 };
@@ -46,7 +51,8 @@ export const sendChat = async (
   history: ChatMessage[]
 ): Promise<{ reply: string; board: BoardData | null }> => {
   // The AI works from the stored board, so let pending saves land first
-  await pendingSave;
+  // (a failed save is already reported by the board)
+  await pendingSave.catch(() => undefined);
   const response = await send("POST", "/api/chat", { message, history });
   if (!response.ok) {
     throw new Error(`Chat failed with status ${response.status}`);
