@@ -117,22 +117,23 @@ Success criteria: the real OpenRouter call succeeds from inside the container.
 ## Part 9: AI with board context and structured outputs
 
 - [x] `POST /api/chat` with body `{ message, history: [{role, content}] }`
-- [x] Send a system prompt describing the board format and the rules (keep column ids, return the whole board when changing it, otherwise `null`), the current board JSON, the history, and the user's message
+- [x] Send a system prompt describing the board format and the rules (keep column ids, return the whole board when changing it, otherwise `null`), the history, and the user's message preceded by the current board JSON (placing the board next to the latest request, plus a rule that earlier requests are already applied, stopped the model from repeating them)
+- [x] OpenRouter routing: `require_parameters` (only providers that honour `response_format`) and ignore CoreWeave, whose deployment returned malformed JSON on every structured request in testing
 - [x] Structured output with `response_format` set to a JSON schema for `{ reply: string, board: Board | null }`; parse it with Pydantic (the AI sees and returns `cards` as a list, since strict JSON schemas can't describe a dict keyed by id; the route converts it back)
 - [x] If a board is returned, validate it and save it; respond `{ reply, board }`
 
 Tests:
 - default (OpenRouter client mocked): the reply is passed through; a returned board is saved; a `null` board leaves the stored board unchanged; an invalid board is rejected and nothing is saved; the prompt includes the board and the history
-- `ai` (real API): "add a card titled X to Backlog" saves a board with that card; a question with no change ("how many cards are in Done?") returns `board: null`; "move card-1 to Done" moves it; "change the title of card-2" edits it
+- `ai` (real API): "add a card titled X to Backlog" saves a board with that card; a question with no change ("how many cards are in Done?") returns `board: null`; "move card-1 to Done" moves it; "change the title of card-2" edits it; a follow-up message with history does not repeat the earlier request
 
 Success criteria: the real model reliably creates, edits and moves cards through `/api/chat`.
 
 ## Part 10: AI chat sidebar
 
-- [ ] `ChatSidebar` component: a collapsible panel next to the board, with the message list, an input, a send button (purple), and a loading state while waiting for a reply
-- [ ] History is kept in component state and sent with each request
-- [ ] When the response includes `board`, update the board state so the UI refreshes right away
-- [ ] Styled with the project color scheme
+- [x] `ChatSidebar` component: a collapsible panel next to the board, with the message list, an input, a send button (purple), and a loading state while waiting for a reply
+- [x] History is kept in component state and sent with each request
+- [x] When the response includes `board`, update the board state so the UI refreshes right away
+- [x] Styled with the project color scheme
 
 Tests:
 - Vitest (`fetch` mocked): sending shows the user message and then the reply; the history is included in the request; a returned board updates the visible cards; the input is disabled while loading

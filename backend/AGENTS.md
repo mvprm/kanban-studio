@@ -33,7 +33,7 @@ Starlette `SessionMiddleware` stores the username in a signed, httponly cookie (
 
 ## AI
 
-`app/ai.py` calls OpenRouter through the `openai` SDK (`base_url` set to OpenRouter, `OPENROUTER_API_KEY` from the environment), model `openai/gpt-oss-120b`. `chat` sends a system prompt with the rules and the current board, then the history and the message, and parses the reply with `chat.completions.parse(response_format=ChatResult)`. Structured output uses `AIBoard`, which lists `cards` instead of keying them by id (strict JSON schemas can't describe a dict); the route converts it back to a `Board`, validates it and saves it. Tests that call the real API are marked `ai` and excluded by default; run them with `uv run --env-file ../.env pytest -m ai`.
+`app/ai.py` calls OpenRouter through the `openai` SDK (`base_url` set to OpenRouter, `OPENROUTER_API_KEY` from the environment), model `openai/gpt-oss-120b`. `chat` sends a system prompt with the rules, then the history, then the current board followed by the message, and parses the reply with `chat.completions.parse(response_format=ChatResult)`. Structured output uses `AIBoard`, which lists `cards` instead of keying them by id (strict JSON schemas can't describe a dict); the route converts it back to a `Board`, validates it and saves it. `PROVIDER` restricts OpenRouter routing to providers that honour `response_format` and skips CoreWeave, which returned malformed JSON in testing. Tests that call the real API are marked `ai` and excluded by default; run them with `uv run --env-file ../.env pytest -m ai`.
 
 ## Commands
 
