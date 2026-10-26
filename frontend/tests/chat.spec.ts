@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import defaultBoard from "../../backend/app/default_board.json";
+import type { BoardData } from "../src/lib/kanban";
 
 test.beforeEach(async ({ page }) => {
   await page.request.post("/api/login", {
@@ -11,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("chat reply and returned board update the page", async ({ page }) => {
-  const board = structuredClone(defaultBoard);
+  const board: BoardData = structuredClone(defaultBoard);
   board.cards["card-ai"] = { id: "card-ai", title: "Card from AI", details: "" };
   board.columns[4].cardIds.push("card-ai");
 

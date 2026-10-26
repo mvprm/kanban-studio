@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import clsx from "clsx";
+import { SendHorizontal, Sparkles, X } from "lucide-react";
 import { sendChat, type ChatMessage } from "@/lib/api";
 import type { BoardData } from "@/lib/kanban";
 
@@ -51,22 +52,25 @@ export const ChatSidebar = ({ onBoardChange }: ChatSidebarProps) => {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-10 rounded-full bg-[var(--primary-blue)] px-5 py-3 text-xs font-semibold uppercase tracking-wide text-white shadow-[var(--shadow)] transition hover:brightness-110"
+        className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-[var(--primary-blue)] px-5 py-3 text-xs font-semibold uppercase tracking-wide text-white shadow-[var(--shadow)] transition hover:brightness-110"
       >
+        <Sparkles aria-hidden size={16} />
         AI chat
       </button>
     );
   }
 
   return (
+    // Floats over the board rather than taking layout space, so the board keeps its width
     <aside
       aria-label="AI chat"
-      className="sticky top-0 z-10 flex h-screen w-[380px] shrink-0 flex-col border-l border-[var(--stroke)] bg-white/90 backdrop-blur"
+      className="fixed inset-2 z-30 flex flex-col overflow-hidden rounded-3xl border border-[var(--stroke)] bg-white/95 shadow-[0_24px_64px_rgba(3,33,71,0.24)] backdrop-blur transition duration-200 starting:translate-y-4 starting:opacity-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:top-6 sm:w-[400px]"
     >
-      <div className="flex items-start justify-between gap-4 border-b border-[var(--stroke)] p-6">
+      <div className="flex items-start justify-between gap-4 border-b border-[var(--stroke)] px-6 py-5">
         <div>
           <div className="h-1 w-10 rounded-full bg-[var(--accent-yellow)]" />
-          <h2 className="mt-3 font-display text-xl font-semibold text-[var(--navy-dark)]">
+          <h2 className="mt-3 flex items-center gap-2 font-display text-xl font-semibold text-[var(--navy-dark)]">
+            <Sparkles aria-hidden size={18} className="text-[var(--primary-blue)]" />
             AI Assistant
           </h2>
           <p className="mt-1 text-xs text-[var(--gray-text)]">
@@ -76,9 +80,11 @@ export const ChatSidebar = ({ onBoardChange }: ChatSidebarProps) => {
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="rounded-full border border-[var(--stroke)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
+          aria-label="Close"
+          title="Close"
+          className="rounded-full p-2 text-[var(--gray-text)] transition hover:bg-[var(--surface)] hover:text-[var(--navy-dark)]"
         >
-          Close
+          <X aria-hidden size={18} />
         </button>
       </div>
 
@@ -125,9 +131,11 @@ export const ChatSidebar = ({ onBoardChange }: ChatSidebarProps) => {
         <button
           type="submit"
           disabled={isLoading}
-          className="rounded-full bg-[var(--secondary-purple)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-60"
+          aria-label="Send"
+          title="Send"
+          className="flex shrink-0 items-center justify-center rounded-full bg-[var(--secondary-purple)] p-2.5 text-white transition hover:brightness-110 disabled:opacity-60"
         >
-          Send
+          <SendHorizontal aria-hidden size={16} />
         </button>
       </form>
     </aside>

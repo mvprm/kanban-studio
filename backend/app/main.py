@@ -109,6 +109,9 @@ def chat(request: ChatRequest, user_id: int = Depends(current_user_id)):
         )
     except ValidationError as error:
         raise HTTPException(status_code=502, detail=f"AI returned an invalid board: {error}")
+    # The AI call takes seconds; don't overwrite edits the user saved meanwhile
+    if db.get_board(user_id) != stored:
+        raise HTTPException(status_code=409, detail="The board changed while the AI was working")
     return {"reply": result.reply, "board": save_board(user_id, board, stored)}
 
 

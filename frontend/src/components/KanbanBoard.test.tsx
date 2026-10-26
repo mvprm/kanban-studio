@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KanbanBoard } from "@/components/KanbanBoard";
-import { mockApi, savedBoards } from "@/test/api";
+import { json, mockApi, savedBoards } from "@/test/api";
 
 const renderBoard = async (onLogout = vi.fn()) => {
   const fetchMock = mockApi();
@@ -91,6 +91,17 @@ describe("KanbanBoard", () => {
       title: "Renamed card",
       details: "New details",
     });
+  });
+
+  it("shows an error when a save fails, and clears it once a save succeeds", async () => {
+    const fetchMock = await renderBoard();
+    fetchMock.mockImplementationOnce(async () => json({ detail: "Not signed in" }, 401));
+    await userEvent.click(screen.getByRole("button", { name: "Delete First card" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Changes could not be saved");
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete Second card" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(savedBoards(fetchMock).at(-1)?.columns[0].cardIds).toEqual([]);
   });
 
   it("cancelling an edit keeps the original and saves nothing", async () => {

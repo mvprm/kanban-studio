@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
+import { Pencil, Trash2 } from "lucide-react";
 import type { Card } from "@/lib/kanban";
 
 type KanbanCardProps = {
@@ -40,9 +41,10 @@ export const KanbanCard = ({ card, onEdit, onDelete }: KanbanCardProps) => {
       ref={setNodeRef}
       style={style}
       className={clsx(
-        "rounded-2xl border border-transparent bg-white px-4 py-4 shadow-[0_12px_24px_rgba(3,33,71,0.08)]",
-        "transition-all duration-150",
-        isDragging && "opacity-60 shadow-[0_18px_32px_rgba(3,33,71,0.16)]"
+        "group relative rounded-2xl border border-[var(--stroke)] bg-white p-4 shadow-[0_4px_12px_rgba(3,33,71,0.06)]",
+        "transition-[border-color,box-shadow,opacity] duration-150 hover:border-[var(--primary-blue)]/40",
+        !isEditing && "cursor-grab",
+        isDragging && "opacity-40"
       )}
       // Not draggable while editing; dnd-kit's attributes would also mark the form aria-disabled
       {...(isEditing ? {} : { ...attributes, ...listeners })}
@@ -85,34 +87,37 @@ export const KanbanCard = ({ card, onEdit, onDelete }: KanbanCardProps) => {
           </div>
         </form>
       ) : (
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h4 className="font-display text-base font-semibold text-[var(--navy-dark)]">
-              {card.title}
-            </h4>
-            <p className="mt-2 text-sm leading-6 text-[var(--gray-text)]">
-              {card.details}
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-1">
+        <>
+          <h4 className="break-words font-display text-[15px] font-semibold leading-snug text-[var(--navy-dark)] pointer-coarse:pr-16">
+            {card.title}
+          </h4>
+          {/* With a mouse, the icons appear over the corner on hover or focus; on touch screens they always show */}
+          <div className="absolute right-2 top-2 flex rounded-lg bg-white transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100">
             <button
               type="button"
               onClick={startEditing}
-              className="rounded-full border border-transparent px-2 py-1 text-xs font-semibold text-[var(--primary-blue)] transition hover:border-[var(--stroke)]"
+              className="rounded-lg p-1.5 text-[var(--gray-text)] transition hover:bg-[var(--surface)] hover:text-[var(--primary-blue)]"
               aria-label={`Edit ${card.title}`}
+              title="Edit"
             >
-              Edit
+              <Pencil aria-hidden size={15} />
             </button>
             <button
               type="button"
               onClick={() => onDelete(card.id)}
-              className="rounded-full border border-transparent px-2 py-1 text-xs font-semibold text-[var(--gray-text)] transition hover:border-[var(--stroke)] hover:text-[var(--navy-dark)]"
+              className="rounded-lg p-1.5 text-[var(--gray-text)] transition hover:bg-[var(--surface)] hover:text-[var(--secondary-purple)]"
               aria-label={`Delete ${card.title}`}
+              title="Delete"
             >
-              Remove
+              <Trash2 aria-hidden size={15} />
             </button>
           </div>
-        </div>
+          {card.details && (
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--gray-text)]">
+              {card.details}
+            </p>
+          )}
+        </>
       )}
     </article>
   );

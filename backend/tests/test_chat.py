@@ -15,11 +15,16 @@ def ai_board(board):
 
 @pytest.fixture
 def fake_ai(monkeypatch):
-    """Replace the OpenRouter client; set `fake_ai.result` to the model's output."""
-    fake = SimpleNamespace(calls=[], result=None)
+    """Replace the OpenRouter client; set `fake_ai.result` to the model's output.
+
+    `fake_ai.during`, if set, runs while the model is "thinking".
+    """
+    fake = SimpleNamespace(calls=[], result=None, during=None)
 
     def parse(**kwargs):
         fake.calls.append(kwargs)
+        if fake.during:
+            fake.during()
         parsed = ai.ChatResult.model_validate(fake.result)
         return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(parsed=parsed))])
 
@@ -66,6 +71,18 @@ def test_invalid_board_is_rejected_and_not_saved(signed_in, fake_ai, change):
     response = signed_in.post("/api/chat", json={"message": "Break the board"})
     assert response.status_code in (422, 502)
     assert signed_in.get("/api/board").json() == DEFAULT
+
+
+def test_board_edited_during_ai_call_is_not_overwritten(signed_in, fake_ai):
+    edited = copy.deepcopy(DEFAULT)
+    edited["columns"][0]["title"] = "Edited meanwhile"
+    from_ai = copy.deepcopy(DEFAULT)
+    from_ai["columns"][1]["title"] = "Renamed by AI"
+    fake_ai.result = {"reply": "Renamed it.", "board": ai_board(from_ai)}
+    fake_ai.during = lambda: db.save_board(db.get_or_create_user("user"), edited)
+    response = signed_in.post("/api/chat", json={"message": "Rename Discovery"})
+    assert response.status_code == 409
+    assert signed_in.get("/api/board").json() == edited
 
 
 def test_prompt_includes_board_history_and_message(signed_in, fake_ai):
