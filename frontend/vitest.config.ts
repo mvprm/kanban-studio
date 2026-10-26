@@ -10,6 +10,10 @@ export default defineConfig({
     globals: true,
     coverage: {
       reporter: ["text", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      // layout.tsx only loads fonts; the drag preview and drag handlers are covered by Playwright
+      exclude: ["src/test/**", "src/**/*.test.{ts,tsx}", "src/app/layout.tsx"],
+      thresholds: { statements: 90, branches: 90, functions: 90, lines: 90 },
     },
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules", "tests"],

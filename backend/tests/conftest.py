@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -12,6 +13,8 @@ os.environ["DB_PATH"] = str(static_dir / "unused.db")
 
 from app import db  # noqa: E402
 from app.main import app  # noqa: E402
+
+DEFAULT = json.loads(db.DEFAULT_BOARD_JSON)
 
 
 @pytest.fixture
@@ -30,5 +33,24 @@ def client(db_path):
 
 @pytest.fixture
 def signed_in(client):
+    """The client, signed in as the seeded demo user."""
     client.post("/api/login", json={"username": "user", "password": "password"})
     return client
+
+
+@pytest.fixture
+def new_client(client):
+    """Makes more clients (each with its own cookies) for the same app and database."""
+
+    def make(username=None, password="secret-pass"):
+        other = TestClient(app)
+        if username:
+            response = other.post("/api/register", json={"username": username, "password": password})
+            assert response.status_code == 201, response.text
+        return other
+
+    return make
+
+
+def first_board_id(client) -> int:
+    return client.get("/api/boards").json()[0]["id"]

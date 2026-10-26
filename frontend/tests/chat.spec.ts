@@ -1,14 +1,12 @@
 import { expect, test } from "@playwright/test";
 import defaultBoard from "../../backend/app/default_board.json";
 import type { BoardData } from "../src/lib/kanban";
+import { openBoard, registerUser } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
-  await page.request.post("/api/login", {
-    data: { username: "user", password: "password" },
-  });
-  await page.request.put("/api/board", { data: defaultBoard });
+  await registerUser(page);
   await page.goto("/");
-  await expect(page.locator('[data-testid^="column-"]')).toHaveCount(5);
+  await openBoard(page, "My first board");
 });
 
 test("chat reply and returned board update the page", async ({ page }) => {
@@ -17,7 +15,7 @@ test("chat reply and returned board update the page", async ({ page }) => {
   board.columns[4].cardIds.push("card-ai");
 
   let request: unknown;
-  await page.route("**/api/chat", async (route) => {
+  await page.route("**/api/boards/*/chat", async (route) => {
     request = route.request().postDataJSON();
     await route.fulfill({ json: { reply: "Added a card to Done.", board } });
   });

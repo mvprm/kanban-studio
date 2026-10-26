@@ -1,33 +1,44 @@
 # Database
 
-SQLite via Python's built-in `sqlite3`. Each user's board is one JSON document, so the frontend, the API and the AI all read and write the same shape (`docs/board-schema.json`).
+SQLite via Python's built-in `sqlite3`. Each board's content is one JSON document, so the frontend, the API and the AI all read and write the same shape (`docs/board-schema.json`).
 
-## Tables
+## Tables (schema version 1)
 
 ```sql
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    password_hash TEXT NOT NULL,          -- "scrypt$<salt hex>$<hash hex>"
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
-CREATE TABLE IF NOT EXISTS boards (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id),
-    data TEXT NOT NULL,  -- board JSON
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE boards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    data TEXT NOT NULL,                   -- board JSON
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
+
+CREATE INDEX boards_user_id ON boards (user_id);
 ```
 
-- `boards.user_id` is `UNIQUE`: one board per user for the MVP. Dropping the constraint later allows several boards per user without changing anything else.
-- No password column: the MVP account is hardcoded in the backend. A `password_hash` column can be added when real accounts are needed.
+- Usernames are unique ignoring case (`user` and `User` are the same account).
+- `AUTOINCREMENT` means ids are never reused. Sessions store the user id, so a deleted user's session can't sign in as a newer user who would otherwise get the same id.
+- Deleting a user deletes their boards (`ON DELETE CASCADE`; `connect()` turns on `PRAGMA foreign_keys`).
+- Timestamps are UTC ISO 8601 strings (`2026-10-26T18:00:00Z`), so the browser parses them correctly.
 
 ## Lifecycle
 
-- The database file and tables are created on app startup if they don't exist (`CREATE TABLE IF NOT EXISTS`).
-- A `users` row is created the first time a signed-in user calls a board route (`current_user_id` dependency).
-- On a user's first board access, a `boards` row is created holding the default board (`backend/app/default_board.json`: 5 columns, 8 cards).
-- Every `PUT /api/board`, and every AI update, replaces `data` and `updated_at` for that user's row.
+- On startup, `init_db` creates the file and tables if missing and sets `PRAGMA user_version` to the schema version.
+- The `user` / `password` demo account is created on startup if it doesn't exist, with the demo board (`backend/app/default_board.json`) as "My first board".
+- Registering creates the user and gives them the demo board as "My first board". Boards created later get the five default columns and no cards.
+- Every save of a board's data, and every AI change, replaces `data` and `updated_at`. Renaming also updates `updated_at`.
+
+## Migration from the MVP
+
+The MVP database (version 0) had `users (id, username, created_at)` and `boards (id, user_id UNIQUE, data, updated_at)`. `init_db` migrates it in one transaction: it renames the old tables, creates the new ones, copies the rows (each board becomes "My first board", timestamps become ISO 8601), and drops the old tables. Migrated users get an empty password hash; on startup the app sets the demo account's password, which was the only account the MVP allowed.
 
 ## Validation
 
