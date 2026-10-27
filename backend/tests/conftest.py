@@ -1,4 +1,3 @@
-import json
 import os
 import tempfile
 from pathlib import Path
@@ -14,7 +13,7 @@ os.environ["DB_PATH"] = str(static_dir / "unused.db")
 from app import db  # noqa: E402
 from app.main import app  # noqa: E402
 
-DEFAULT = json.loads(db.DEFAULT_BOARD_JSON)
+DEFAULT = db.default_board()
 
 
 @pytest.fixture

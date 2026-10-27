@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StringConstraints, ValidationError
 from starlette.middleware.sessions import SessionMiddleware
@@ -151,7 +151,6 @@ def delete_account(confirmation: PasswordConfirmation, request: Request, user: d
     check_password(user, confirmation.password)
     db.delete_user(user["id"])
     request.session.clear()
-    return Response(status_code=204)
 
 
 # Boards
@@ -182,7 +181,6 @@ def rename_board(request: BoardNameRequest, board: dict = Depends(owned_board), 
 @app.delete("/api/boards/{board_id}", status_code=204)
 def delete_board(board: dict = Depends(owned_board)):
     db.delete_board(board["id"])
-    return Response(status_code=204)
 
 
 def save_data(board: dict, data: Board) -> dict:

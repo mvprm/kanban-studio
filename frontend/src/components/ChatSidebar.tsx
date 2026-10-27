@@ -97,11 +97,11 @@ export const ChatSidebar = ({ boardId, onBoardChange }: ChatSidebarProps) => {
       </div>
 
       <div ref={listRef} className="flex flex-1 flex-col gap-3 overflow-y-auto p-6">
-        {messages.length === 0 ? (
+        {messages.length === 0 && (
           <p className="text-sm text-[var(--gray-text)]">
             Try &quot;Add a card to Backlog for writing release notes&quot;.
           </p>
-        ) : null}
+        )}
         {messages.map((message, index) => (
           <p
             key={index}
@@ -115,16 +115,16 @@ export const ChatSidebar = ({ boardId, onBoardChange }: ChatSidebarProps) => {
             {message.content}
           </p>
         ))}
-        {isLoading ? (
+        {isLoading && (
           <p className="self-start text-sm font-semibold text-[var(--gray-text)]">
             Thinking...
           </p>
-        ) : null}
-        {error ? (
+        )}
+        {error && (
           <p role="alert" className="self-start text-sm font-semibold text-[var(--secondary-purple)]">
             {error}
           </p>
-        ) : null}
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="flex gap-2 border-t border-[var(--stroke)] p-4">

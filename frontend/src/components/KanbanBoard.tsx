@@ -9,7 +9,6 @@ import {
   useSensors,
   closestCorners,
   type DragEndEvent,
-  type DragStartEvent,
 } from "@dnd-kit/core";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { KanbanColumn } from "@/components/KanbanColumn";
@@ -62,10 +61,6 @@ export const KanbanBoard = ({ boardId }: KanbanBoardProps) => {
       () => setSaveError(""),
       () => setSaveError("Changes could not be saved. Check your connection or sign in again.")
     );
-  };
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveCardId(event.active.id as string);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -153,7 +148,7 @@ export const KanbanBoard = ({ boardId }: KanbanBoardProps) => {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
+        onDragStart={(event) => setActiveCardId(event.active.id as string)}
         onDragEnd={handleDragEnd}
       >
         {/* Columns share the full width, and scroll sideways once they reach their minimum */}
@@ -171,7 +166,7 @@ export const KanbanBoard = ({ boardId }: KanbanBoardProps) => {
           ))}
         </section>
         <DragOverlay>
-          {activeCard ? <KanbanCardPreview card={activeCard} /> : null}
+          {activeCard && <KanbanCardPreview card={activeCard} />}
         </DragOverlay>
       </DndContext>
       <ChatSidebar boardId={boardId} onBoardChange={setBoard} />

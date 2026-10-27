@@ -146,6 +146,8 @@ Success criteria: chatting with the AI in the sidebar can create, edit and move 
 
 Goal: grow the MVP into a multi-user project management app: real accounts, several boards per user, richer cards and columns, search, and strong unit, API and end-to-end test coverage. Decisions were made autonomously during an iterative build loop; each part lists them so they can be reviewed.
 
+Status: Parts 11 and 12 are done and released (accounts, multiple boards; see the README for the feature list and `docs/DEPLOYMENT.md` for running in production). Parts 13 to 15 are the roadmap and not built yet. The production gaps listed in `docs/DEPLOYMENT.md` (Known gaps) are candidates for Part 15.
+
 ## Key decisions (Phase 2)
 
 - Accounts live in the database: `users.password_hash` holds a salted `hashlib.scrypt` hash (standard library, no new dependency). Anyone can register; the `user` / `password` demo account is seeded on startup so the original sign in keeps working.

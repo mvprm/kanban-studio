@@ -55,7 +55,7 @@ export const AuthForm = ({ onAuth }: AuthFormProps) => {
             autoComplete="username"
             className={fieldClass}
             required
-            {...(isRegister && { pattern: "[A-Za-z0-9._\\-]{3,32}" })}
+            pattern={isRegister ? "[A-Za-z0-9._\\-]{3,32}" : undefined}
           />
           {isRegister && (
             <span className={hintClass}>3 to 32 letters, digits, dots, dashes or underscores.</span>

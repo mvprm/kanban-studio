@@ -49,5 +49,5 @@ A working MVP of the frontend has been built and is already in frontend. This is
 
 ## Working documentation
 
-All documents for planning and executing this project will be in the docs/ directory.
+All documents for planning and executing this project will be in the docs/ directory: PLAN.md (plan and roadmap), DATABASE.md, DEPLOYMENT.md (production and operations) and DEVELOPMENT.md (setup and tests). Keep them current when behavior changes.
 Please review the docs/PLAN.md document before proceeding.
