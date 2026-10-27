@@ -2,7 +2,7 @@ import json
 import os
 import sqlite3
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 DB_PATH = Path(os.environ.get("DB_PATH", Path(__file__).parent.parent / "data" / "app.db"))
@@ -57,14 +57,11 @@ BOARD_SUMMARY = "id, name, created_at AS createdAt, updated_at AS updatedAt"
 @contextmanager
 def connect() -> Iterator[sqlite3.Connection]:
     """Open a connection, commit on success, and always close it."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         with conn:
             yield conn
-    finally:
-        conn.close()
 
 
 def init_db():

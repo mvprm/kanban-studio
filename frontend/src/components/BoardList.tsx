@@ -108,13 +108,17 @@ export const BoardList = ({ onOpen }: BoardListProps) => {
         </p>
       )}
 
-      {boards === null ? (
-        !error && <p className="text-sm font-semibold text-[var(--gray-text)]">Loading boards...</p>
-      ) : boards.length === 0 ? (
+      {boards === null && !error && (
+        <p className="text-sm font-semibold text-[var(--gray-text)]">Loading boards...</p>
+      )}
+
+      {boards?.length === 0 && (
         <p className="rounded-3xl border-2 border-dashed border-[var(--navy-dark)]/10 p-8 text-center text-sm text-[var(--gray-text)]">
           No boards yet. Create one to get started.
         </p>
-      ) : (
+      )}
+
+      {!!boards?.length && (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {boards.map((board) => (
             <li
