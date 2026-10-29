@@ -174,3 +174,11 @@ cython_debug/
 
 .DS_Store
 
+
+# SQLite data
+/data/
+/backend/data/
+/backend/.pytest_tmp/
+
+# Frontend export copied in by Docker
+/backend/app/static/

@@ -1,0 +1,23 @@
+[project]
+name = "pm-backend"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.156.8",
+    "itsdangerous>=2.2.0",
+    "openai>=3.36.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-m 'not ai' --cov=app --cov-report=term-missing --cov-fail-under=95"
+markers = ["ai: calls the real OpenRouter API (run with: uv run --env-file ../.env pytest -m ai)"]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]

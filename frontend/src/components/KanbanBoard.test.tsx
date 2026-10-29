@@ -1,46 +1,148 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { boardRecord, json, mockApi, requests, savedBoards } from "@/test/api";
 
-const getFirstColumn = () => screen.getAllByTestId(/column-/i)[0];
+const renderBoard = async () => {
+  const fetchMock = mockApi();
+  render(<KanbanBoard boardId={1} />);
+  await screen.findAllByTestId(/^column-/);
+  return fetchMock;
+};
+
+const lastSaved = async (fetchMock: ReturnType<typeof mockApi>) => {
+  await waitFor(() => expect(savedBoards(fetchMock).length).toBeGreaterThan(0));
+  return savedBoards(fetchMock).at(-1)!;
+};
+
+const column = (id: string) => screen.getByTestId(`column-${id}`);
 
 describe("KanbanBoard", () => {
-  it("renders five columns", () => {
-    render(<KanbanBoard />);
-    expect(screen.getAllByTestId(/column-/i)).toHaveLength(5);
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it("renames a column", async () => {
-    render(<KanbanBoard />);
-    const column = getFirstColumn();
-    const input = within(column).getByLabelText("Column title");
+  it("renders the board from the API", async () => {
+    const fetchMock = await renderBoard();
+    expect(requests(fetchMock, "GET", "/api/boards/1")).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "My first board" })).toBeInTheDocument();
+    expect(screen.getByText(/^3 cards\./)).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^column-/)).toHaveLength(5);
+    expect(within(column("col-backlog")).getByText("First card")).toBeInTheDocument();
+    expect(within(column("col-progress")).getByText("Third card")).toBeInTheDocument();
+    expect(savedBoards(fetchMock)).toHaveLength(0);
+  });
+
+  it("loads the board it is given", async () => {
+    mockApi({ boards: [boardRecord(1, "One"), boardRecord(7, "Seven")] });
+    render(<KanbanBoard boardId={7} />);
+    expect(await screen.findByRole("heading", { name: "Seven" })).toBeInTheDocument();
+  });
+
+  it("shows an error when the board cannot be loaded", async () => {
+    const fetchMock = mockApi();
+    fetchMock.mockImplementationOnce(async () => json({ detail: "Board not found" }, 404));
+    render(<KanbanBoard boardId={1} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Board not found");
+    expect(screen.queryAllByTestId(/^column-/)).toHaveLength(0);
+  });
+
+  it("saves to the open board", async () => {
+    const fetchMock = mockApi({ boards: [boardRecord(1, "One"), boardRecord(7, "Seven")] });
+    render(<KanbanBoard boardId={7} />);
+    await screen.findByRole("heading", { name: "Seven" });
+    await userEvent.click(screen.getByRole("button", { name: "Delete First card" }));
+    await waitFor(() =>
+      expect(requests(fetchMock, "PUT", "/api/boards/7/data")).toHaveLength(1)
+    );
+    expect(requests(fetchMock, "PUT", "/api/boards/1/data")).toHaveLength(0);
+  });
+
+  it("saves an added card with empty details when none are given", async () => {
+    const fetchMock = await renderBoard();
+    const backlog = column("col-backlog");
+    await userEvent.click(within(backlog).getByRole("button", { name: /add a card/i }));
+    await userEvent.type(within(backlog).getByPlaceholderText(/card title/i), "Bare card");
+    await userEvent.click(within(backlog).getByRole("button", { name: /add card/i }));
+    const saved = await lastSaved(fetchMock);
+    expect(saved.cards[saved.columns[0].cardIds[2]].details).toBe("");
+  });
+
+  it("saves a renamed column", async () => {
+    const fetchMock = await renderBoard();
+    const input = within(column("col-backlog")).getByLabelText("Column title");
     await userEvent.clear(input);
-    await userEvent.type(input, "New Name");
-    expect(input).toHaveValue("New Name");
+    await userEvent.type(input, "Ideas");
+    expect(input).toHaveValue("Ideas");
+    await waitFor(() =>
+      expect(savedBoards(fetchMock).at(-1)?.columns[0].title).toBe("Ideas")
+    );
   });
 
-  it("adds and removes a card", async () => {
-    render(<KanbanBoard />);
-    const column = getFirstColumn();
-    const addButton = within(column).getByRole("button", {
-      name: /add a card/i,
+  it("saves an added card", async () => {
+    const fetchMock = await renderBoard();
+    const backlog = column("col-backlog");
+    await userEvent.click(within(backlog).getByRole("button", { name: /add a card/i }));
+    await userEvent.type(within(backlog).getByPlaceholderText(/card title/i), "New card");
+    await userEvent.type(within(backlog).getByPlaceholderText(/details/i), "Notes");
+    await userEvent.click(within(backlog).getByRole("button", { name: /add card/i }));
+
+    expect(within(backlog).getByText("New card")).toBeInTheDocument();
+    const saved = await lastSaved(fetchMock);
+    const newId = saved.columns[0].cardIds[2];
+    expect(saved.cards[newId]).toEqual({ id: newId, title: "New card", details: "Notes" });
+  });
+
+  it("saves a deleted card", async () => {
+    const fetchMock = await renderBoard();
+    await userEvent.click(screen.getByRole("button", { name: "Delete First card" }));
+    expect(screen.queryByText("First card")).not.toBeInTheDocument();
+    const saved = await lastSaved(fetchMock);
+    expect(saved.cards["card-1"]).toBeUndefined();
+    expect(saved.columns[0].cardIds).toEqual(["card-2"]);
+  });
+
+  it("saves an edited card", async () => {
+    const fetchMock = await renderBoard();
+    await userEvent.click(screen.getByRole("button", { name: "Edit First card" }));
+    const title = screen.getByLabelText("Edit title");
+    await userEvent.clear(title);
+    await userEvent.type(title, "Renamed card");
+    const details = screen.getByLabelText("Edit details");
+    await userEvent.clear(details);
+    await userEvent.type(details, "New details");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(screen.getByText("Renamed card")).toBeInTheDocument();
+    expect(screen.getByText("New details")).toBeInTheDocument();
+    const saved = await lastSaved(fetchMock);
+    expect(saved.cards["card-1"]).toEqual({
+      id: "card-1",
+      title: "Renamed card",
+      details: "New details",
     });
-    await userEvent.click(addButton);
+  });
 
-    const titleInput = within(column).getByPlaceholderText(/card title/i);
-    await userEvent.type(titleInput, "New card");
-    const detailsInput = within(column).getByPlaceholderText(/details/i);
-    await userEvent.type(detailsInput, "Notes");
+  it("shows an error when a save fails, and clears it once a save succeeds", async () => {
+    const fetchMock = await renderBoard();
+    fetchMock.mockImplementationOnce(async () => json({ detail: "Not signed in" }, 401));
+    await userEvent.click(screen.getByRole("button", { name: "Delete First card" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Changes could not be saved");
 
-    await userEvent.click(within(column).getByRole("button", { name: /add card/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete Second card" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(savedBoards(fetchMock).at(-1)?.columns[0].cardIds).toEqual([]);
+  });
 
-    expect(within(column).getByText("New card")).toBeInTheDocument();
+  it("cancelling an edit keeps the original and saves nothing", async () => {
+    const fetchMock = await renderBoard();
+    await userEvent.click(screen.getByRole("button", { name: "Edit First card" }));
+    await userEvent.clear(screen.getByLabelText("Edit title"));
+    await userEvent.type(screen.getByLabelText("Edit title"), "Discarded");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-    const deleteButton = within(column).getByRole("button", {
-      name: /delete new card/i,
-    });
-    await userEvent.click(deleteButton);
-
-    expect(within(column).queryByText("New card")).not.toBeInTheDocument();
+    expect(screen.getByText("First card")).toBeInTheDocument();
+    expect(screen.queryByText("Discarded")).not.toBeInTheDocument();
+    expect(savedBoards(fetchMock)).toHaveLength(0);
   });
 });

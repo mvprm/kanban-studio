@@ -10,6 +10,7 @@ type KanbanColumnProps = {
   cards: Card[];
   onRename: (columnId: string, title: string) => void;
   onAddCard: (columnId: string, title: string, details: string) => void;
+  onEditCard: (cardId: string, title: string, details: string) => void;
   onDeleteCard: (columnId: string, cardId: string) => void;
 };
 
@@ -18,6 +19,7 @@ export const KanbanColumn = ({
   cards,
   onRename,
   onAddCard,
+  onEditCard,
   onDeleteCard,
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -26,39 +28,39 @@ export const KanbanColumn = ({
     <section
       ref={setNodeRef}
       className={clsx(
-        "flex min-h-[520px] flex-col rounded-3xl border border-[var(--stroke)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow)] transition",
+        "flex min-h-80 flex-col rounded-3xl border border-[var(--stroke)] bg-[var(--surface-column)] p-3 transition",
         isOver && "ring-2 ring-[var(--accent-yellow)]"
       )}
       data-testid={`column-${column.id}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="w-full">
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
-              {cards.length} cards
-            </span>
-          </div>
+      <div className="px-1 pt-1">
+        <div className="h-1 w-8 rounded-full bg-[var(--accent-yellow)]" />
+        <div className="mt-2 flex items-center gap-2">
           <input
             value={column.title}
             onChange={(event) => onRename(column.id, event.target.value)}
-            className="mt-3 w-full bg-transparent font-display text-lg font-semibold text-[var(--navy-dark)] outline-none"
+            className="-mx-1 min-w-0 flex-1 rounded-lg bg-transparent px-1 py-0.5 font-display text-base font-semibold text-[var(--navy-dark)] outline-none transition hover:bg-white/70 focus:bg-white focus:ring-2 focus:ring-[var(--primary-blue)]/40"
             aria-label="Column title"
           />
+          <span className="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-[var(--gray-text)]">
+            {cards.length} {cards.length === 1 ? "card" : "cards"}
+          </span>
         </div>
       </div>
-      <div className="mt-4 flex flex-1 flex-col gap-3">
+      {/* Only the cards scroll; the list hugs its cards, so "Add a card" follows the last one */}
+      <div className="mt-3 flex min-h-0 flex-col gap-2 overflow-y-auto pr-1">
         <SortableContext items={column.cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
             <KanbanCard
               key={card.id}
               card={card}
+              onEdit={onEditCard}
               onDelete={(cardId) => onDeleteCard(column.id, cardId)}
             />
           ))}
         </SortableContext>
         {cards.length === 0 && (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[var(--stroke)] px-3 py-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
+          <div className="flex items-center justify-center rounded-2xl border-2 border-dashed border-[var(--navy-dark)]/10 px-3 py-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
             Drop a card here
           </div>
         )}
