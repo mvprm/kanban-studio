@@ -48,3 +48,7 @@ cd frontend && npm run test:e2e       # browser tests against the running contai
 ```
 
 See [Development](docs/DEVELOPMENT.md#tests) for details.
+
+## Acknowledgements
+
+Built on the starter project from [ed-donner/pm](https://github.com/ed-donner/pm), part of Ed Donner's AI coding course.
