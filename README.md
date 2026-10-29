@@ -2,6 +2,18 @@
 
 Project management with Kanban boards and an AI assistant. Each user has their own boards; the assistant reads a board and can create, edit and move cards on request. Runs as a single Docker container with a SQLite database.
 
+![A board with the AI assistant, which has just added one card and moved another](docs/screenshots/board-chat.png)
+
+## Overview
+
+The AI's change on the full board: "Write release notes" added to Backlog, "QA micro-interactions" moved to Done.
+
+![The full board after the AI's change](docs/screenshots/board.png)
+
+Each user has several private boards, one per project.
+
+![The board list](docs/screenshots/boards.png)
+
 ## Features
 
 - **Accounts**: register, sign in, change password, delete account (with all boards). Sessions last 14 days. A demo account, `user` / `password`, is always available.
